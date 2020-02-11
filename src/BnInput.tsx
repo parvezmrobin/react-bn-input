@@ -16,13 +16,18 @@ import AvroPhonetic from "./lib/AvroPhonetic";
 
 type Suggestion = string;
 
-function getSuggestions(value: string) {
-  return provider.suggest(value).words;
-}
+const split = (sentence: Suggestion): { head?: string, tail: string } => {
+  const matches = Array.from(sentence.matchAll(/[!@#$%^&*(),.?":{}|<>\s]/g));
+  if (!matches.length) {
+    return {tail: sentence};
+  }
+  const lastIndex = matches[matches.length - 1].index as number;
+  return {head: sentence.substring(0, lastIndex + 1), tail: sentence.substring(lastIndex + 1)};
+};
 
-const getSuggestionValue : GetSuggestionValue<Suggestion> = suggestion => suggestion;
+const getSuggestionValue: GetSuggestionValue<Suggestion> = suggestion => suggestion;
 
-const renderSuggestion : RenderSuggestion<Suggestion> = suggestion => (
+const renderSuggestion: RenderSuggestion<Suggestion> = suggestion => (
   <span>{suggestion}</span>
 );
 
@@ -41,7 +46,11 @@ const provider = AvroPhonetic(
   }
 );
 
-class BnInput extends React.Component<{}, {value: string, input : string, suggestions: Suggestion[]}> {
+function getSuggestions(value: string) {
+  return provider.suggest(value).words;
+}
+
+class BnInput extends React.Component<{}, { value: string, input: string, suggestions: Suggestion[] }> {
   constructor(props: object) {
     super(props);
 
@@ -52,30 +61,31 @@ class BnInput extends React.Component<{}, {value: string, input : string, sugges
     };
   }
 
-  onChange = (event : React.FormEvent, { newValue } : ChangeEvent) => {
+  onChange = (event: React.FormEvent, {newValue}: ChangeEvent) => {
     this.setState({
       value: newValue
     });
   };
 
-  onSuggestionsFetchRequested : SuggestionsFetchRequested = ({ value }) => {
+  onSuggestionsFetchRequested: SuggestionsFetchRequested = ({value}) => {
+    const {tail} = split(value);
     this.setState({
-      suggestions: getSuggestions(value)
+      suggestions: getSuggestions(tail)
     });
   };
 
-  onSuggestionsClearRequested : OnSuggestionsClearRequested = () => {
+  onSuggestionsClearRequested: OnSuggestionsClearRequested = () => {
     this.setState({
       suggestions: []
     });
   };
 
-  onSuggestionSelected : OnSuggestionSelected<Suggestion> = (event, {suggestionValue}) => {
+  onSuggestionSelected: OnSuggestionSelected<Suggestion> = (event, {suggestionValue}) => {
     provider.commit(this.state.input, suggestionValue);
   };
 
   render() {
-    const { value, suggestions } = this.state;
+    const {value, suggestions} = this.state;
     const inputProps = {
       placeholder: "Type 'c'",
       value,
@@ -91,7 +101,7 @@ class BnInput extends React.Component<{}, {value: string, input : string, sugges
           onSuggestionSelected={this.onSuggestionSelected}
           getSuggestionValue={getSuggestionValue}
           renderSuggestion={renderSuggestion}
-          inputProps={inputProps} />
+          inputProps={inputProps}/>
       </div>
     );
   }
