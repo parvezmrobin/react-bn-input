@@ -6,104 +6,48 @@
 
 import AutoSuggest, {
   ChangeEvent,
-  GetSuggestionValue,
+  GetSuggestionValue, OnSuggestionsClearRequested, OnSuggestionSelected,
   RenderSuggestion,
   SuggestionsFetchRequested
 } from "react-autosuggest";
 import React from "react";
 
-type Suggestion = {
-  name: string,
-  year: number,
-}
+import AvroPhonetic from "./lib/AvroPhonetic";
 
-const languages = [
-  {
-    name: 'C',
-    year: 1972
-  },
-  {
-    name: 'C#',
-    year: 2000
-  },
-  {
-    name: 'C++',
-    year: 1983
-  },
-  {
-    name: 'Clojure',
-    year: 2007
-  },
-  {
-    name: 'Elm',
-    year: 2012
-  },
-  {
-    name: 'Go',
-    year: 2009
-  },
-  {
-    name: 'Haskell',
-    year: 1990
-  },
-  {
-    name: 'Java',
-    year: 1995
-  },
-  {
-    name: 'Javascript',
-    year: 1995
-  },
-  {
-    name: 'Perl',
-    year: 1987
-  },
-  {
-    name: 'PHP',
-    year: 1995
-  },
-  {
-    name: 'Python',
-    year: 1991
-  },
-  {
-    name: 'Ruby',
-    year: 1995
-  },
-  {
-    name: 'Scala',
-    year: 2003
-  }
-];
-
-function escapeRegexCharacters(str: string) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+type Suggestion = string;
 
 function getSuggestions(value: string) {
-  const escapedValue = escapeRegexCharacters(value.trim());
-
-  if (escapedValue === '') {
-    return [];
-  }
-
-  const regex = new RegExp('^' + escapedValue, 'i');
-
-  return languages.filter(language => regex.test(language.name));
+  return provider.suggest(value).words;
 }
 
-const getSuggestionValue : GetSuggestionValue<Suggestion> = suggestion => suggestion.name;
+const getSuggestionValue : GetSuggestionValue<Suggestion> = suggestion => suggestion;
 
 const renderSuggestion : RenderSuggestion<Suggestion> = suggestion => (
-  <span>{suggestion.name}</span>
+  <span>{suggestion}</span>
 );
 
-class BnInput extends React.Component<{}, {value: string, suggestions: Suggestion[]}> {
+const STORE_KEY = 'BN_INPUT';
+
+const provider = AvroPhonetic(
+  function () {
+    return JSON.parse(window.localStorage.getItem(STORE_KEY) || '{}')
+  },
+  function (candidates: object) {
+    console.log(candidates);
+    window.localStorage.setItem(STORE_KEY, JSON.stringify(candidates || {}))
+  },
+  function (...args: any) {
+    console.log('third', args);
+  }
+);
+
+class BnInput extends React.Component<{}, {value: string, input : string, suggestions: Suggestion[]}> {
   constructor(props: object) {
     super(props);
 
     this.state = {
       value: '',
+      input: '',
       suggestions: []
     };
   }
@@ -120,10 +64,14 @@ class BnInput extends React.Component<{}, {value: string, suggestions: Suggestio
     });
   };
 
-  onSuggestionsClearRequested = () => {
+  onSuggestionsClearRequested : OnSuggestionsClearRequested = () => {
     this.setState({
       suggestions: []
     });
+  };
+
+  onSuggestionSelected : OnSuggestionSelected<Suggestion> = (event, {suggestionValue}) => {
+    provider.commit(this.state.input, suggestionValue);
   };
 
   render() {
@@ -140,6 +88,7 @@ class BnInput extends React.Component<{}, {value: string, suggestions: Suggestio
           suggestions={suggestions}
           onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
           onSuggestionsClearRequested={this.onSuggestionsClearRequested}
+          onSuggestionSelected={this.onSuggestionSelected}
           getSuggestionValue={getSuggestionValue}
           renderSuggestion={renderSuggestion}
           inputProps={inputProps} />
