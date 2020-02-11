@@ -5,8 +5,7 @@
  */
 
 import AutoSuggest, {
-  ChangeEvent,
-  GetSuggestionValue, OnSuggestionsClearRequested, OnSuggestionSelected,
+  GetSuggestionValue, InputProps, OnSuggestionsClearRequested, OnSuggestionSelected,
   RenderSuggestion,
   SuggestionsFetchRequested
 } from "react-autosuggest";
@@ -61,15 +60,14 @@ class BnInput extends React.Component<{}, { value: string, input: string, sugges
     };
   }
 
-  onChange = (event: React.FormEvent, {newValue}: ChangeEvent) => {
-    this.setState({
-      value: newValue
-    });
+  onChange = () => {
   };
 
   onSuggestionsFetchRequested: SuggestionsFetchRequested = ({value}) => {
-    const {tail} = split(value);
+    const {head, tail} = split(value);
     this.setState({
+      value: head || '',
+      input: tail,
       suggestions: getSuggestions(tail)
     });
   };
@@ -81,14 +79,18 @@ class BnInput extends React.Component<{}, { value: string, input: string, sugges
   };
 
   onSuggestionSelected: OnSuggestionSelected<Suggestion> = (event, {suggestionValue}) => {
+    this.setState(state => ({
+      value: state.value + suggestionValue,
+      input: '',
+    }));
     provider.commit(this.state.input, suggestionValue);
   };
 
   render() {
-    const {value, suggestions} = this.state;
-    const inputProps = {
+    const {value, input, suggestions} = this.state;
+    const inputProps : InputProps<Suggestion> = {
       placeholder: "Type 'c'",
-      value,
+      value: value + input,
       onChange: this.onChange
     };
 
