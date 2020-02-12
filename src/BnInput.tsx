@@ -5,18 +5,44 @@
  */
 
 import AutoSuggest, {
+  ChangeEvent,
   GetSuggestionValue, InputProps, OnSuggestionsClearRequested, OnSuggestionSelected,
   RenderSuggestion,
   SuggestionsFetchRequested
 } from "react-autosuggest";
-import React from "react";
+import React, {FormEvent, RefObject} from "react";
 
 import AvroPhonetic from "./lib/AvroPhonetic";
 
+/**
+ * stores selections in `localStorage` with following key
+ */
+const STORE_KEY = 'BN_INPUT';
+
+/**
+ * Provides phonetic translation
+ */
+const provider = AvroPhonetic(
+  // gets previous selections from `localStorage`
+  function () {
+    return JSON.parse(window.localStorage.getItem(STORE_KEY) || '{}')
+  },
+  // stores user's selections in `localStorage`
+  function (candidates: object) {
+    window.localStorage.setItem(STORE_KEY, JSON.stringify(candidates || {}))
+  },
+  // could not retrieve what this param does as the source code is minified
+  function (...args: any) {
+    console.log('third', args);
+  }
+);
+
 type Suggestion = string;
 
+const nonCharRegEx = /[!@#$%&*(),?":{}|<>\s]/g;
+
 const split = (sentence: Suggestion): { head?: string, tail: string } => {
-  const matches = Array.from(sentence.matchAll(/[!@#$%^&*(),.?":{}|<>\s]/g));
+  const matches = Array.from(sentence.matchAll(nonCharRegEx));
   if (!matches.length) {
     return {tail: sentence};
   }
@@ -30,43 +56,40 @@ const renderSuggestion: RenderSuggestion<Suggestion> = suggestion => (
   <span>{suggestion}</span>
 );
 
-const STORE_KEY = 'BN_INPUT';
-
-const provider = AvroPhonetic(
-  function () {
-    return JSON.parse(window.localStorage.getItem(STORE_KEY) || '{}')
-  },
-  function (candidates: object) {
-    console.log(candidates);
-    window.localStorage.setItem(STORE_KEY, JSON.stringify(candidates || {}))
-  },
-  function (...args: any) {
-    console.log('third', args);
-  }
-);
-
-function getSuggestions(value: string) {
+function getSuggestions(value: string) : Suggestion[] {
   return provider.suggest(value).words;
 }
 
-class BnInput extends React.Component<{}, { value: string, input: string, suggestions: Suggestion[] }> {
-  constructor(props: object) {
+type BnInputProps = { autofocus?: boolean };
+type BnInputState = { value: string, input: string, suggestions: Suggestion[], ref: RefObject<AutoSuggest> };
+
+class BnInput extends React.Component<BnInputProps, BnInputState> {
+  constructor(props: Readonly<BnInputProps>) {
     super(props);
 
     this.state = {
       value: '',
       input: '',
-      suggestions: []
+      suggestions: [],
+      ref: React.createRef<AutoSuggest>(),
     };
   }
 
-  onChange = () => {
+  onChange = (event: FormEvent, {newValue, method} : ChangeEvent) => {
+    if (method === 'type') {
+      this.setState({
+        value: newValue
+      });
+    }
   };
 
   onSuggestionsFetchRequested: SuggestionsFetchRequested = ({value}) => {
     const {head, tail} = split(value);
+    if (!tail) {
+
+    }
     this.setState({
-      value: head || '',
+      value,
       input: tail,
       suggestions: getSuggestions(tail)
     });
@@ -74,29 +97,39 @@ class BnInput extends React.Component<{}, { value: string, input: string, sugges
 
   onSuggestionsClearRequested: OnSuggestionsClearRequested = () => {
     this.setState({
+      input: '',
       suggestions: []
     });
   };
 
   onSuggestionSelected: OnSuggestionSelected<Suggestion> = (event, {suggestionValue}) => {
-    this.setState(state => ({
-      value: state.value + suggestionValue,
-      input: '',
-    }));
+    this.setState(state => {
+      const {head = ''} = split(state.value);
+      return {
+        value: head + suggestionValue,
+        input: '',
+      };
+    });
     provider.commit(this.state.input, suggestionValue);
   };
 
+  componentDidMount() {
+    if(this.props.autofocus) {
+      this.state.ref.current?.input?.focus();
+    }
+  }
+
   render() {
-    const {value, input, suggestions} = this.state;
+    const {value, suggestions, ref} = this.state;
     const inputProps : InputProps<Suggestion> = {
-      placeholder: "Type 'c'",
-      value: value + input,
-      onChange: this.onChange
+      value: value,
+      onChange: this.onChange,
     };
 
     return (
       <div style={{width: '200px'}}>
         <AutoSuggest
+          ref={ref}
           suggestions={suggestions}
           onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
           onSuggestionsClearRequested={this.onSuggestionsClearRequested}

@@ -1,6 +1,6 @@
-/* eslint-disable no-unused-expressions */
+/* eslint-disable */
 export default function (v, x, y) {
-  return new function (v, x, y) {
+  return new (function (v, x, y) {
     function z() {
     }
 
@@ -15,7 +15,6 @@ export default function (v, x, y) {
     }
 
     var h = {}, m, p = function (a) {
-      console.log(a)
       h[m] = {};
       for (const dkeys in a) h[m][dkeys] = a[dkeys]
     };
@@ -2948,8 +2947,8 @@ export default function (v, x, y) {
     p({
       levenshtein: function (a, b) {
         var c, d, e, g = [];
-        if (0 == a.length) return b.length;
-        if (0 == b.length) return a.length;
+        if (0 === a.length) return b.length;
+        if (0 === b.length) return a.length;
         for (c = 0; c <= a.length; c++) g[c] = [], g[c][0] = c;
         for (d = 0; d <= b.length; d++) g[0][d] = d;
         for (c = 1; c <= a.length; c++) for (d = 1; d <= b.length; d++) e = a.charAt(c - 1) == b.charAt(d - 1) ? 0 : 1, g[c][d] = Math.min(g[c - 1][d] + 1, g[c][d - 1] + 1, g[c - 1][d - 1] + e), 1 < c && 1 < d && a.charAt(c - 1) == b.charAt(d - 2) && a.charAt(c - 2) == b.charAt(d - 1) && (g[c][d] = Math.min(g[c][d], g[c - 2][d - 2] + e));
@@ -4328,5 +4327,5 @@ export default function (v, x, y) {
         return u._candidateSelections[a]
       }, version: "" + h.version
     }
-  }(v, x, y)
+  })(v, x, y)
 };
