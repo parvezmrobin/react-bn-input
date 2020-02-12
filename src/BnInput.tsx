@@ -17,7 +17,7 @@ import AvroPhonetic from "./lib/AvroPhonetic";
 /**
  * stores selections in `localStorage` with following key
  */
-const STORE_KEY = 'BN_INPUT';
+const {STORE_KEY = 'BN_INPUT'} = process.env;
 
 /**
  * Provides phonetic translation
@@ -42,12 +42,13 @@ type Suggestion = string;
 const nonCharRegEx = /[!@#$%&*(),?":{}|<>\s]/g;
 
 const split = (sentence: Suggestion): { head?: string, tail: string } => {
-  const matches = Array.from(sentence.matchAll(nonCharRegEx));
-  if (!matches.length) {
-    return {tail: sentence};
+  let index;
+  for (index = sentence.length - 1; index >= 0; index--) {
+    if (sentence[index].match(nonCharRegEx)) {
+      return {head: sentence.substring(0, index + 1), tail: sentence.substring(index + 1)};
+    }
   }
-  const lastIndex = matches[matches.length - 1].index as number;
-  return {head: sentence.substring(0, lastIndex + 1), tail: sentence.substring(lastIndex + 1)};
+  return {tail: sentence};
 };
 
 const getSuggestionValue: GetSuggestionValue<Suggestion> = suggestion => suggestion;
@@ -174,6 +175,7 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
         <AutoSuggest
           ref={ref}
           suggestions={suggestions}
+          highlightFirstSuggestion
           onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
           onSuggestionsClearRequested={this.onSuggestionsClearRequested}
           onSuggestionSelected={this.onSuggestionSelected}
