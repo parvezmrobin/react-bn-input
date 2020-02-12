@@ -92,36 +92,43 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
 
   onSuggestionsFetchRequested: SuggestionsFetchRequested = ({value}) => {
     const {head, tail} = split(value);
-    if (!tail) { // a new special char is typed
-      if (head && head.length > 1) { // `head` has at least two char which is possibly a word-char and a special-char
-        if (!nonCharRegEx.test(head[head.length - 2])) { // second last char in `head` is a word-char
-          const typedSentence = head.substr(0, head.length - 1);
-          const specialChar = head[head.length - 1];
-          const {head: alreadyTranslated = ''} = split(typedSentence);
-          const highlightedSuggestion = this.state.highlightedSuggestion;
-          if (highlightedSuggestion) {
-            this.setState({
-              value: alreadyTranslated + highlightedSuggestion + specialChar,
-              input: '',
-              suggestions: [],
-            });
 
-            return;
-          }
+    // translate last english word if a special char is pressed
+    if (
+      // a new special char is typed and last char of `head` is that special-char
+      !tail
+      // `head` has at least two char which is possibly a word-char followed by the pressed special-char
+      && head && head.length > 1
+      // second last char in `head` is a word-char
+      && !nonCharRegEx.test(head[head.length - 2])
+      // also `head` has to be lengthier than `state.value` to ensure that the change is not cause by backspace
+      && head.length > this.state.value.length
+    ) {
+      const typedSentence = head.substr(0, head.length - 1);
+      const specialChar = head[head.length - 1];
+      const {head: alreadyTranslated = ''} = split(typedSentence);
+      const highlightedSuggestion = this.state.highlightedSuggestion;
+      if (highlightedSuggestion) {
+        this.setState({
+          value: alreadyTranslated + highlightedSuggestion + specialChar,
+          input: '',
+          suggestions: [],
+        });
 
-          const suggestion = this.state.suggestions;
-          if (suggestion.length) {
-            const firstSuggestion = suggestion[0];
-            this.setState({
-              value: alreadyTranslated + firstSuggestion + specialChar,
-              input: '',
-              highlightedSuggestion: '',
-              suggestions: [],
-            });
+        return;
+      }
 
-            return;
-          }
-        }
+      const suggestion = this.state.suggestions;
+      if (suggestion.length) {
+        const firstSuggestion = suggestion[0];
+        this.setState({
+          value: alreadyTranslated + firstSuggestion + specialChar,
+          input: '',
+          highlightedSuggestion: '',
+          suggestions: [],
+        });
+
+        return;
       }
     }
     this.setState({
