@@ -56,12 +56,18 @@ const renderSuggestion: RenderSuggestion<Suggestion> = suggestion => (
   <span>{suggestion}</span>
 );
 
-function getSuggestions(value: string) : Suggestion[] {
+function getSuggestions(value: string): Suggestion[] {
   return provider.suggest(value).words;
 }
 
 type BnInputProps = { autofocus?: boolean };
-type BnInputState = { value: string, input: string, suggestions: Suggestion[], ref: RefObject<AutoSuggest> };
+type BnInputState = {
+  value: string,
+  input: string,
+  suggestions: Suggestion[],
+  highlightedSuggestion: Suggestion,
+  ref: RefObject<AutoSuggest>,
+};
 
 class BnInput extends React.Component<BnInputProps, BnInputState> {
   constructor(props: Readonly<BnInputProps>) {
@@ -70,23 +76,53 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
     this.state = {
       value: '',
       input: '',
+      highlightedSuggestion: '',
       suggestions: [],
       ref: React.createRef<AutoSuggest>(),
     };
   }
 
-  onChange = (event: FormEvent, {newValue, method} : ChangeEvent) => {
+  onChange = (event: FormEvent, {newValue, method}: ChangeEvent) => {
     if (method === 'type') {
-      this.setState({
-        value: newValue
-      });
+      this.setState({value: newValue, highlightedSuggestion: ''});
+    } else if (['down', 'up'].includes(method)) {
+      this.setState({highlightedSuggestion: newValue})
     }
   };
 
   onSuggestionsFetchRequested: SuggestionsFetchRequested = ({value}) => {
     const {head, tail} = split(value);
-    if (!tail) {
+    if (!tail) { // a new special char is typed
+      if (head && head.length > 1) { // `head` has at least two char which is possibly a word-char and a special-char
+        if (!nonCharRegEx.test(head[head.length - 2])) { // second last char in `head` is a word-char
+          const typedSentence = head.substr(0, head.length - 1);
+          const specialChar = head[head.length - 1];
+          const {head: alreadyTranslated = ''} = split(typedSentence);
+          const highlightedSuggestion = this.state.highlightedSuggestion;
+          if (highlightedSuggestion) {
+            this.setState({
+              value: alreadyTranslated + highlightedSuggestion + specialChar,
+              input: '',
+              suggestions: [],
+            });
 
+            return;
+          }
+
+          const suggestion = this.state.suggestions;
+          if (suggestion.length) {
+            const firstSuggestion = suggestion[0];
+            this.setState({
+              value: alreadyTranslated + firstSuggestion + specialChar,
+              input: '',
+              highlightedSuggestion: '',
+              suggestions: [],
+            });
+
+            return;
+          }
+        }
+      }
     }
     this.setState({
       value,
@@ -114,14 +150,14 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
   };
 
   componentDidMount() {
-    if(this.props.autofocus) {
+    if (this.props.autofocus) {
       this.state.ref.current?.input?.focus();
     }
   }
 
   render() {
     const {value, suggestions, ref} = this.state;
-    const inputProps : InputProps<Suggestion> = {
+    const inputProps: InputProps<Suggestion> = {
       value: value,
       onChange: this.onChange,
     };
