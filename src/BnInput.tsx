@@ -6,11 +6,11 @@
 
 import AutoSuggest, {
   ChangeEvent,
-  GetSuggestionValue, InputProps, OnSuggestionsClearRequested, OnSuggestionSelected,
+  GetSuggestionValue, InputProps, OnSuggestionsClearRequested, OnSuggestionSelected, RenderInputComponent,
   RenderSuggestion,
   SuggestionsFetchRequested
 } from "react-autosuggest";
-import React, {FormEvent, RefObject} from "react";
+import React, {DetailedHTMLProps, FormEvent, InputHTMLAttributes, ReactHTML, RefObject} from "react";
 
 import AvroPhonetic from "./lib/AvroPhonetic";
 
@@ -57,11 +57,12 @@ const renderSuggestion: RenderSuggestion<Suggestion> = suggestion => (
   <span>{suggestion}</span>
 );
 
-function getSuggestions(value: string): Suggestion[] {
-  return provider.suggest(value).words;
-}
+const getSuggestions = (value: string): Suggestion[] => provider.suggest(value).words;
 
-type BnInputProps = { autofocus?: boolean };
+type BnInputProps = {
+  autofocus?: boolean,
+  inputEl?: keyof ReactHTML,
+};
 type BnInputState = {
   value: string,
   input: string,
@@ -135,7 +136,7 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
     this.setState({
       value,
       input: tail,
-      suggestions: getSuggestions(tail)
+      suggestions: tail ? getSuggestions(tail): [],
     });
   };
 
@@ -163,6 +164,14 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
     }
   }
 
+  renderInputComponent: RenderInputComponent<Suggestion> = (inputProps: InputProps<Suggestion>) => {
+    const props = inputProps as DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
+    const {inputEl = 'input'} = this.props;
+    if (inputEl) {
+      return React.createElement(inputEl, props);
+    }
+  };
+
   render() {
     const {value, suggestions, ref} = this.state;
     const inputProps: InputProps<Suggestion> = {
@@ -176,6 +185,7 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
           ref={ref}
           suggestions={suggestions}
           highlightFirstSuggestion
+          renderInputComponent={this.renderInputComponent}
           onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
           onSuggestionsClearRequested={this.onSuggestionsClearRequested}
           onSuggestionSelected={this.onSuggestionSelected}
