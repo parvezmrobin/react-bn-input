@@ -111,6 +111,8 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
       const {head: alreadyTranslated = ''} = split(typedSentence);
       const highlightedSuggestion = this.state.highlightedSuggestion;
       if (highlightedSuggestion) {
+        // if user highlighted a suggestion, then commit it for future reference as well as use now
+        provider.commit(this.state.input, highlightedSuggestion);
         this.setState({
           value: alreadyTranslated + highlightedSuggestion + specialChar,
           input: '',
@@ -133,11 +135,25 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
         return;
       }
     }
+
+    const suggestions = tail ? getSuggestions(tail): [];
     this.setState({
       value,
       input: tail,
-      suggestions: tail ? getSuggestions(tail): [],
+      suggestions: suggestions,
     });
+
+    if (tail) {
+      // if user previously selected / highlighted a suggestion for this input
+      // by default highlight this
+      const candidate = provider.candidate(tail);
+      if (candidate) {
+        this.state.ref.current?.setState({
+          highlightedSuggestionIndex: suggestions.indexOf(candidate),
+          highlightedSuggestion: candidate,
+        });
+      }
+    }
   };
 
   onSuggestionsClearRequested: OnSuggestionsClearRequested = () => {
@@ -184,7 +200,6 @@ class BnInput extends React.Component<BnInputProps, BnInputState> {
         <AutoSuggest
           ref={ref}
           suggestions={suggestions}
-          highlightFirstSuggestion
           renderInputComponent={this.renderInputComponent}
           onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
           onSuggestionsClearRequested={this.onSuggestionsClearRequested}
