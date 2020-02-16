@@ -13,7 +13,7 @@ const fileNames = readdirSync(dirPath);
 for (const fileName of fileNames) {
   if (fileName.match(/^BnInput.*\.js$/)) {
     const filePath = join(dirPath, fileName);
-    module.exports = require(filePath);
+    module.exports = require(`./${filePath}`);
     break;
   }
 }
